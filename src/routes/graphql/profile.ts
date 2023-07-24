@@ -1,3 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+import DataLoader from 'dataloader';
 import { FastifyInstance } from 'fastify';
 import {
   GraphQLBoolean,
@@ -31,16 +37,43 @@ export const profileType = new GraphQLObjectType({
     },
     memberType: {
       type: memberType,
-      resolve: async (
+      resolve: (
         parent: { memberTypeId: string },
         args: { id: string },
-        context: FastifyInstance,
+        context: {
+          fastify: FastifyInstance,
+          dataloaders: WeakMap<object, any>
+        },
+        info: {
+          fieldNodes: any;
+        },
       ) => {
-        return await context.prisma.memberType.findUnique({
-          where: {
-            id: parent.memberTypeId,
-          },
-        });
+        const { dataloaders, fastify } = context;
+        console.log(info.fieldNodes);
+
+        let dl = dataloaders.get(info.fieldNodes);
+
+        if (!dl) {
+          dl = new DataLoader(async (ids: readonly string[]) => {
+            const rows = await fastify.prisma.memberType.findMany({
+              where: {
+                id: {
+                  in: ids as string[],
+                },
+              },
+            });
+
+            const sortedInIdsOrder = ids.map((id) =>
+              rows.find((row: { id: string }) => row.id === id),
+            );
+
+            return sortedInIdsOrder;
+          });
+
+          dataloaders.set(info.fieldNodes, dl);
+        }
+
+        return dl.load(parent.memberTypeId);
       },
     },
   },
@@ -48,8 +81,14 @@ export const profileType = new GraphQLObjectType({
 
 export const profilesQuery = {
   type: new GraphQLList(profileType),
-  resolve: async (_, __, context: FastifyInstance) => {
-    return await context.prisma.profile.findMany();
+  resolve: async (
+    _,
+    __,
+    context: {
+      fastify: FastifyInstance;
+    },
+  ) => {
+    return await context.fastify.prisma.profile.findMany();
   },
 };
 
@@ -60,8 +99,14 @@ export const profileQuery = {
       type: new GraphQLNonNull(UUIDType),
     },
   },
-  resolve: async (_, args: { id: string }, context: FastifyInstance) => {
-    return await context.prisma.profile.findUnique({
+  resolve: async (
+    _,
+    args: { id: string },
+    context: {
+      fastify: FastifyInstance;
+    },
+  ) => {
+    return await context.fastify.prisma.profile.findUnique({
       where: {
         id: args.id,
       },
@@ -101,8 +146,14 @@ export const createProfileMutation = {
       type: CreateProfileInput,
     },
   },
-  resolve: async (_, args: { dto: createProfileDtoModel }, context: FastifyInstance) => {
-    return await context.prisma.profile.create({
+  resolve: async (
+    _,
+    args: { dto: createProfileDtoModel },
+    context: {
+      fastify: FastifyInstance;
+    },
+  ) => {
+    return await context.fastify.prisma.profile.create({
       data: args.dto,
     });
   },
@@ -115,8 +166,14 @@ export const deleteProfileMutation = {
       type: new GraphQLNonNull(UUIDType),
     },
   },
-  resolve: async (_, args: { id: string }, context: FastifyInstance) => {
-    await context.prisma.profile.delete({
+  resolve: async (
+    _,
+    args: { id: string },
+    context: {
+      fastify: FastifyInstance;
+    },
+  ) => {
+    await context.fastify.prisma.profile.delete({
       where: {
         id: args.id,
       },
@@ -152,9 +209,11 @@ export const changeProfileMutation = {
   resolve: async (
     _,
     args: { id: string; dto: createProfileDtoModel },
-    context: FastifyInstance,
+    context: {
+      fastify: FastifyInstance;
+    },
   ) => {
-    return await context.prisma.profile.update({
+    return await context.fastify.prisma.profile.update({
       where: {
         id: args.id,
       },

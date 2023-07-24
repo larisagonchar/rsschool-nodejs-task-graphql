@@ -37,8 +37,14 @@ export const memberType = new GraphQLObjectType({
 
 export const memberTypesQuery = {
   type: new GraphQLList(memberType),
-  resolve: async (_, __, context: FastifyInstance) => {
-    return await context.prisma.memberType.findMany();
+  resolve: async (
+    _,
+    __,
+    context: {
+      fastify: FastifyInstance;
+    },
+  ) => {
+    return await context.fastify.prisma.memberType.findMany();
   },
 };
 
@@ -49,8 +55,14 @@ export const memberTypeQuery = {
       type: MemberTypeIdEnum,
     },
   },
-  resolve: async (_, args: { id: MemberTypeId }, context: FastifyInstance) => {
-    return await context.prisma.memberType.findUnique({
+  resolve: async (
+    _,
+    args: { id: MemberTypeId },
+    context: {
+      fastify: FastifyInstance;
+    },
+  ) => {
+    return await context.fastify.prisma.memberType.findUnique({
       where: {
         id: args.id,
       },

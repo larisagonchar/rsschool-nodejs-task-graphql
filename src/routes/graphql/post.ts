@@ -29,8 +29,14 @@ export const postType = new GraphQLObjectType({
 
 export const postsQuery = {
   type: new GraphQLList(postType),
-  resolve: async (_, __, context: FastifyInstance) => {
-    return await context.prisma.post.findMany();
+  resolve: async (
+    _,
+    __,
+    context: {
+      fastify: FastifyInstance;
+    },
+  ) => {
+    return await context.fastify.prisma.post.findMany();
   },
 };
 
@@ -41,8 +47,14 @@ export const postQuery = {
       type: new GraphQLNonNull(UUIDType),
     },
   },
-  resolve: async (_, args: { id: string }, context: FastifyInstance) => {
-    return await context.prisma.post.findUnique({
+  resolve: async (
+    _,
+    args: { id: string },
+    context: {
+      fastify: FastifyInstance;
+    },
+  ) => {
+    return await context.fastify.prisma.post.findUnique({
       where: {
         id: args.id,
       },
@@ -78,8 +90,14 @@ export const createPostMutation = {
       type: new GraphQLNonNull(CreatePostInput),
     },
   },
-  resolve: async (_, args: { dto: createPostDtoModel }, context: FastifyInstance) => {
-    return await context.prisma.post.create({
+  resolve: async (
+    _,
+    args: { dto: createPostDtoModel },
+    context: {
+      fastify: FastifyInstance;
+    },
+  ) => {
+    return await context.fastify.prisma.post.create({
       data: args.dto,
     });
   },
@@ -92,8 +110,14 @@ export const deletePostMutation = {
       type: new GraphQLNonNull(UUIDType),
     },
   },
-  resolve: async (_, args: { id: string }, context: FastifyInstance) => {
-    await context.prisma.post.delete({
+  resolve: async (
+    _,
+    args: { id: string },
+    context: {
+      fastify: FastifyInstance;
+    },
+  ) => {
+    await context.fastify.prisma.post.delete({
       where: {
         id: args.id,
       },
@@ -129,9 +153,11 @@ export const changePostMutation = {
   resolve: async (
     _,
     args: { id: string; dto: createPostDtoModel },
-    context: FastifyInstance,
+    context: {
+      fastify: FastifyInstance;
+    },
   ) => {
-    return await context.prisma.post.update({
+    return await context.fastify.prisma.post.update({
       where: {
         id: args.id,
       },

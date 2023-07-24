@@ -40,7 +40,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       },
     },
     async handler(req) {
-
       const schema = new GraphQLSchema({
         query: new GraphQLObjectType({
           name: 'Query',
@@ -86,7 +85,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         schema,
         source: req.body.query,
         variableValues: req.body.variables,
-        contextValue: fastify,
+        contextValue: {
+          fastify,
+          dataloaders: new WeakMap(),
+        },
       });
 
       return {
